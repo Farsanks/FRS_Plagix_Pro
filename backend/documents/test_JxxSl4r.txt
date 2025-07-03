@@ -1,0 +1,1 @@
+This is a simple test document for checking plagiarism detection logic using NLP and Python.

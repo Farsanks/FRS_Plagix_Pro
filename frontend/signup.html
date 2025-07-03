@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sign Up | Plagix Pro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #c3cfe2, #dde7f1);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      border-radius: 15px;
+      background: #fff;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+    }
+    .logo {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #007bff;
+    }
+    .form-select, .form-control {
+      border-radius: 10px;
+    }
+    .btn-primary {
+      border-radius: 10px;
+    }
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+    }
+  </style>
+</head>
+<body>
+
+<div class="toast-container">
+  <div id="toast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body" id="toastMessage">Signup successful!</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+</div>
+
+<div class="card p-4" style="width: 100%; max-width: 420px;">
+  <div class="text-center mb-3">
+    <div class="logo">📝 Plagix Pro</div>
+    <small class="text-muted">Create your account</small>
+  </div>
+
+  <div class="mb-3">
+    <label for="username" class="form-label">👤 Username</label>
+    <input type="text" class="form-control" id="username" placeholder="Choose a username">
+  </div>
+
+  <div class="mb-3">
+    <label for="password" class="form-label">🔑 Password</label>
+    <input type="password" class="form-control" id="password" placeholder="Choose a password">
+  </div>
+
+  <div class="mb-3">
+    <label for="role" class="form-label">🎓 Role</label>
+    <select id="role" class="form-select" onchange="toggleSubjectField()">
+      <option value="teacher">Teacher</option>
+      <option value="student">Student</option>
+    </select>
+  </div>
+
+  <div class="mb-3" id="subjectField">
+    <label for="subject" class="form-label">📘 Subject</label>
+    <select id="subject" class="form-select">
+      <option value="Computer Science">Computer Science</option>
+      <option value="Mathematics">Mathematics</option>
+      <option value="Physics">Physics</option>
+      <option value="Chemistry">Chemistry</option>
+      <option value="Biology">Biology</option>
+    </select>
+  </div>
+
+  <button class="btn btn-primary w-100" onclick="signup()">Sign Up</button>
+  <div class="text-center mt-3">
+    Already have an account? <a href="login.html">Login here</a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function showToast(message, isError = false) {
+  const toast = document.getElementById("toast");
+  const toastMsg = document.getElementById("toastMessage");
+  toast.classList.remove("text-bg-success", "text-bg-danger");
+  toast.classList.add(isError ? "text-bg-danger" : "text-bg-success");
+  toastMsg.innerText = message;
+
+  new bootstrap.Toast(toast).show();
+}
+
+function toggleSubjectField() {
+  const role = document.getElementById("role").value;
+  document.getElementById("subjectField").style.display = role === "teacher" ? "block" : "none";
+}
+
+function signup() {
+  const username = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const role = document.getElementById("role").value;
+  const subject = document.getElementById("subject").value;
+
+  if (!username || !password) {
+    showToast("Username and password are required", true);
+    return;
+  }
+
+  const body = { username, password, role };
+  if (role === "teacher") body.subject = subject;
+
+  fetch("http://127.0.0.1:8000/api/signup/", {
+    method: "POST",
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.token) {
+      showToast("✅ Signup successful! Redirecting...");
+      setTimeout(() => window.location.href = "login.html", 1500);
+    } else {
+      showToast(data.error || "Signup failed", true);
+    }
+  })
+  .catch(() => showToast("Server error occurred", true));
+}
+
+window.onload = toggleSubjectField;
+</script>
+</body>
+</html>

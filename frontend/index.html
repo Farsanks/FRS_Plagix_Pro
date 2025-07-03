@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Plagix Pro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body.dark-mode {
+      background-color: #121212;
+      color: #ffffff;
+    }
+    .dark-mode .table,
+    .dark-mode .modal-content,
+    .dark-mode input,
+    .dark-mode select {
+      background-color: #1e1e1e;
+      color: #ffffff;
+    }
+    .sidebar {
+      height: 100vh;
+      position: fixed;
+      width: 200px;
+      background: #343a40;
+      color: white;
+      padding-top: 20px;
+    }
+    .sidebar a {
+      color: white;
+      display: block;
+      padding: 10px 15px;
+      text-decoration: none;
+    }
+    .sidebar a:hover {
+      background: #495057;
+    }
+    .content {
+      margin-left: 220px;
+      padding: 20px;
+    }
+    .page { display: none; }
+    .page.active { display: block; }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <h4 class="text-center">📄 Plagix</h4>
+  <a href="#" onclick="showPage('upload')">📤 Upload</a>
+  <a href="#" onclick="showPage('compare')">📊 Compare</a>
+  <a href="#" onclick="showPage('history')">📁 History</a>
+  <a href="#" onclick="showPage('chatbot')">🤖 Chatbot</a>
+  <a href="#" onclick="logout()">🚪 Logout</a>
+  <hr>
+  <button class="btn btn-sm btn-light ms-3" onclick="toggleTheme()">🌗 Toggle Theme</button>
+</div>
+
+<div class="content">
+  <!-- Upload Page -->
+  <div id="upload" class="page active">
+    <h3>Upload Document</h3>
+    <input type="text" id="uploadTitle" placeholder="Document Title" class="form-control mb-2">
+    <input type="file" id="uploadFile" class="form-control mb-2">
+    <button class="btn btn-primary" onclick="uploadDocument()">Upload</button>
+  </div>
+
+  <!-- Compare Page -->
+  <div id="compare" class="page">
+    <h3>Compare Documents</h3>
+    <select id="compareDoc1" class="form-select mb-2"><option value="">-- Select Doc 1 --</option></select>
+    <select id="compareDoc2" class="form-select mb-2"><option value="">-- Select Doc 2 --</option></select>
+    <button class="btn btn-success" onclick="compareDocuments()">Compare</button>
+    <div id="compareResult" class="mt-3"></div>
+  </div>
+
+  <!-- History Page -->
+  <div id="history" class="page">
+    <h3>Comparison History</h3>
+    <table class="table table-bordered mt-3">
+      <thead><tr><th>Doc 1</th><th>Doc 2</th><th>Plagiarism %</th><th>Time</th><th>Matches</th></tr></thead>
+      <tbody id="historyTable"></tbody>
+    </table>
+  </div>
+
+  <!-- Chatbot Page -->
+  <div id="chatbot" class="page">
+    <h3>🤖 Chatbot</h3>
+    <input type="text" id="chatMessage" placeholder="Type a message..." class="form-control mb-2" />
+    <button class="btn btn-info" onclick="sendMessage()">Send</button>
+    <p id="chatResponse" class="mt-3 text-success"></p>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="matchModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">Matched Sentences</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="modalContent"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+let token = localStorage.getItem("token") || null;
+
+function showPage(pageId) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.getElementById(pageId).classList.add("active");
+}
+
+function toggleTheme() {
+  document.body.classList.toggle("dark-mode");
+}
+
+// Upload
+function uploadDocument() {
+  const formData = new FormData();
+  formData.append("title", document.getElementById("uploadTitle").value);
+  formData.append("file", document.getElementById("uploadFile").files[0]);
+
+  fetch("http://127.0.0.1:8000/api/upload/", {
+    method: "POST",
+    headers: { Authorization: `Token ${token}` },
+    body: formData
+  })
+  .then(res => res.json())
+  .then(data => {
+    alert("✅ Uploaded Successfully!");
+    loadDocuments();
+    loadHistory();
+    document.getElementById("uploadTitle").value = "";
+    document.getElementById("uploadFile").value = "";
+  })
+  .catch(err => alert("❌ Upload failed"));
+}
+
+// Compare
+function loadDocuments() {
+  fetch("http://127.0.0.1:8000/api/documents/", {
+    headers: { Authorization: `Token ${token}` }
+  })
+  .then(res => res.json())
+  .then(data => {
+    const doc1 = document.getElementById("compareDoc1");
+    const doc2 = document.getElementById("compareDoc2");
+    doc1.innerHTML = doc2.innerHTML = `<option value="">-- Select --</option>`;
+    data.forEach(d => {
+      doc1.innerHTML += `<option value="${d.id}">${d.title}</option>`;
+      doc2.innerHTML += `<option value="${d.id}">${d.title}</option>`;
+    });
+  });
+}
+
+function compareDocuments() {
+  const doc1 = document.getElementById("compareDoc1").value;
+  const doc2 = document.getElementById("compareDoc2").value;
+
+  if (!doc1 || !doc2) {
+    alert("⚠️ Please select both documents");
+    return;
+  }
+
+  fetch("http://127.0.0.1:8000/api/compare/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Token ${token}`
+    },
+    body: JSON.stringify({ doc1_id: doc1, doc2_id: doc2 })
+  })
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById("compareResult").innerHTML = `
+      <h5 class="text-info">Plagiarism: ${data.plagiarism_percentage}%</h5>
+      <button class="btn btn-sm btn-outline-primary" onclick='showMatches(${JSON.stringify(data.matches)})'>View Matches</button>
+    `;
+    loadHistory();
+  });
+}
+
+// History
+function loadHistory() {
+  fetch("http://127.0.0.1:8000/api/history/", {
+    headers: { Authorization: `Token ${token}` }
+  })
+  .then(res => res.json())
+  .then(data => {
+    const table = document.getElementById("historyTable");
+    table.innerHTML = "";
+    data.forEach(item => {
+      const row = `
+        <tr>
+          <td>${item.doc1}</td>
+          <td>${item.doc2}</td>
+          <td>${item.percentage}%</td>
+          <td>${item.timestamp}</td>
+          <td><button class="btn btn-sm btn-outline-info" onclick='showMatches(${JSON.stringify(item.match_details)})'>View</button></td>
+        </tr>`;
+      table.innerHTML += row;
+    });
+  });
+}
+
+// Modal
+function showMatches(matches) {
+  const content = document.getElementById("modalContent");
+  content.innerHTML = matches.length ? matches.map((m, i) => `
+    <div class="mb-3 border-bottom pb-2">
+      <strong>${i + 1}. Match Score: ${m.match_score}%</strong><br>
+      <span class="text-primary">Doc1:</span> ${m.doc1_sentence}<br>
+      <span class="text-success">Doc2:</span> ${m.doc2_sentence}
+    </div>
+  `).join("") : "<p>No matches</p>";
+
+  new bootstrap.Modal(document.getElementById("matchModal")).show();
+}
+
+// Chatbot Function
+async function sendMessage() {
+  const msg = document.getElementById("chatMessage").value;
+  const responseElement = document.getElementById("chatResponse");
+  responseElement.textContent = "Thinking...";
+
+  try {
+    const response = await fetch("http://127.0.0.1:8000/api/chat/message/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ message: msg })
+    });
+
+    const data = await response.json();
+    responseElement.textContent = data.reply || data.error;
+  } catch (err) {
+    responseElement.textContent = "Error sending message.";
+  }
+}
+
+function logout() {
+  localStorage.removeItem("token");
+  token = null;
+  alert("✅ Logged out");
+  location.reload();
+}
+
+// Load
+window.onload = () => {
+  if (!token) {
+    token = prompt("🔐 Please enter your token to access this app:");
+    if (token) {
+      localStorage.setItem("token", token);
+    } else {
+      alert("❌ Token is required!");
+      return;
+    }
+  }
+
+  loadDocuments();
+  loadHistory();
+  showPage("upload");
+}
+</script>
+</body>
+</html>

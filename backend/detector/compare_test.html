@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Compare Documents</title>
+</head>
+<body>
+  <h1>Plagiarism Comparison</h1>
+
+  <form id="compareForm">
+    Doc 1: 
+    <select id="doc1_id" name="doc1_id"></select><br><br>
+
+    Doc 2: 
+    <select id="doc2_id" name="doc2_id"></select><br><br>
+
+    <input type="submit" value="Compare">
+  </form>
+
+  <h3>Response:</h3>
+  <pre id="responseBox">Waiting for response...</pre>
+
+  <script>
+    // Fetch and populate dropdowns
+    fetch('http://127.0.0.1:8000/api/documents/')
+      .then(res => res.json())
+      .then(data => {
+        const select1 = document.getElementById('doc1_id');
+        const select2 = document.getElementById('doc2_id');
+
+        data.forEach(doc => {
+          const option1 = document.createElement('option');
+          option1.value = doc.id;
+          option1.textContent = `${doc.id} - ${doc.title}`;
+          select1.appendChild(option1);
+
+          const option2 = document.createElement('option');
+          option2.value = doc.id;
+          option2.textContent = `${doc.id} - ${doc.title}`;
+          select2.appendChild(option2);
+        });
+      });
+
+    // Form submission handler
+    const form = document.getElementById('compareForm');
+    const responseBox = document.getElementById('responseBox');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(form);
+      const payload = {
+        doc1_id: formData.get("doc1_id"),
+        doc2_id: formData.get("doc2_id")
+      };
+
+      try {
+        const res = await fetch('http://127.0.0.1:8000/api/compare/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const contentType = res.headers.get("content-type");
+
+        if (res.ok && contentType.includes("application/json")) {
+          const data = await res.json();
+          responseBox.textContent = JSON.stringify(data, null, 2);
+        } else {
+          const text = await res.text();
+          responseBox.textContent = "⚠️ Unexpected response:\n" + text;
+        }
+      } catch (err) {
+        responseBox.textContent = "❌ Compare failed: " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Upload Document Test</title>
+</head>
+<body>
+  <h1>Upload Document to Django API</h1>
+  <form id="uploadForm" enctype="multipart/form-data">
+    Title: <input type="text" name="title" required><br><br>
+    File: <input type="file" name="file" accept=".pdf,.docx,.txt" required><br><br>
+    <input type="submit" value="Upload">
+  </form>
+
+  <h3>Response:</h3>
+  <pre id="responseBox"></pre>
+
+  <script>
+  const form = document.getElementById('uploadForm');
+  const responseBox = document.getElementById('responseBox');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(form);
+
+    try {
+      const res = await fetch('http://127.0.0.1:8000/api/upload/', {
+        method: 'POST',
+        body: formData
+      });
+
+      const contentType = res.headers.get("content-type");
+
+      if (res.ok && contentType && contentType.includes("application/json")) {
+        const data = await res.json();
+        responseBox.textContent = JSON.stringify(data, null, 2);
+      } else {
+        const text = await res.text(); // catch HTML/text/plain errors too
+        responseBox.textContent = `Unexpected response:\n${text}`;
+      }
+
+    } catch (err) {
+      responseBox.textContent = "❌ Upload failed: " + err.message;
+    }
+  });
+</script>
+
+</body>
+</html>
