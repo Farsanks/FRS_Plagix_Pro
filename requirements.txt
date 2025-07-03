@@ -38,3 +38,5 @@ urllib3==2.5.0
 gunicorn
 openai
 whitenoise
+django-cors-headers
+
