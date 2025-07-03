@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     
+    
     # your apps
     'backend.detector',  # Add this if your app is named 'detector'
     'rest_framework',  # If you're using DRF
